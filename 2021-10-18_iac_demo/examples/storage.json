@@ -1,16 +1,24 @@
 {
   "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
   "contentVersion": "1.0.0.0",
-  "parameters": {},
+  "parameters": {
+    "accountName": {
+      "type": "string",
+      "defaultValue": "pdcostodemo1csn",
+      "metadata": {
+        "description": "Name of the storage account"
+      }
+    }
+  },
   "functions": [],
   "variables": {},
   "resources": [
     {
-      "name": "pdcosto77csn",
+      "name": "[parameters('accountName')]",
       "type": "Microsoft.Storage/storageAccounts",
       "apiVersion": "2021-04-01",
       "tags": {
-        "displayName": "pdcosto77csn"
+        "displayName": "[parameters('accountName')]"
       },
       "location": "[resourceGroup().location]",
       "kind": "StorageV2",
