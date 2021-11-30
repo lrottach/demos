@@ -19,6 +19,7 @@ $vmCredentials = Get-Credential
 $nsgName = $vmName + "-nic1-nsg"
 $nicName = $vmName + "-nic1"
 $diskName = $vmName + "-odsk"
+$pipName = $vmName + "nic1-pip"
 
 # Tags
 $tags = @{Creator = "lrottach@baggenstos.ch"; CreationDate = "24.11.2021"; Environment = "Production" }
@@ -53,12 +54,16 @@ $nsg = New-AzNetworkSecurityGroup -Name $nsgName `
 $vnet = Get-AzVirtualNetwork -Name $networkName -ResourceGroupName $networkRg
 $subnet = Get-AzVirtualNetworkSubnetConfig -Name 'DemoSubnet' -VirtualNetwork $vnet
 
+# Create public ip address
+$publicIp = New-AzPublicIpAddress -ResourceGroupName $vmRg -Name $pipName -Location $deploymentLocation -AllocationMethod Static -Tag $tags
+
 # Create IP configuration and network interface
 $ipconfig = New-AzNetworkInterfaceIpConfig -Name "IPConfigPrivate" -PrivateIpAddressversion IPv4 -Subnetid $subnet.Id
 $nic = New-AzNetworkInterface -Name $nicName `
 	-ResourceGroupName $vmRg `
 	-Location $deploymentLocation `
 	-NetworkSecurityGroupId $nsg.Id `
+	-PublicIpAddressId $publicIp.Id `
 	-IpConfiguration $ipconfig -Tag $tags
 
 # Build VM configuration
@@ -72,6 +77,10 @@ $vm = Set-AzVMBootDiagnostic -VM $vm -Enable -ResourceGroupName $diagStorageRg -
 # VM deployment
 $vm = New-AzVM -VM $vm -ResourceGroupName $vmRg -Location $deploymentLocation -Tag $tags
 
+
+
+
+### Az Vm Extension - Create AD Forest
 $userName = "locadmin"
 $userPassword = "Kennwort_2022!" | ConvertTo-SecureString -AsPlainText -Force
 $fileUri = "https://pdmosto2mastercsn.blob.core.windows.net/dsc/CreateADPDC.zip"
