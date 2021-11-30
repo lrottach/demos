@@ -18,13 +18,14 @@ $networkRg = "pdmo-vnet1-csn-rg"
 $networkName = "pdmo-vnet1-csn"
 
 # Diagnostics Storage Variables
-$diagStorageRg = "pdmo-sto1-csn"
+$diagStorageRg = "pdmo-sto1-csn-rg"
 $diagStorageName = "pdmosto1csn"
 
 # Virtual Machine Variables
 $vmName = "pdmo-adds1-csn"
-$vmSize = ""
+$vmSize = "Standard_D2s_v4"
 $vmRg = "pdmo-adds1-csn-rg"
+$vmCredentials = Get-Credentials
 
 # Virtual Machine Dependencies
 $nsgName = $vmName + "-nic1-nsg"
@@ -39,9 +40,9 @@ $tags = @{Creator="lrottach@baggenstos.ch"; CreationDate="24.11.2021"; Environme
 ```powershell
 New-AzResourceGroup -Name $networkRg -Location $deploymentLocation -Tag $tags
 $virtualNetwork = New-AzVirtualNetwork -Name $networkName `
-    -ResourceGroup $rgNetwork `
+    -ResourceGroup $networkRg `
     -Location $deploymentLocation `
-    -AddressPrefix = '10.0.0.0/16' `
+    -AddressPrefix '10.0.0.0/16' `
     -Tag $tags
 
 $subnetConfig = Add-AzVirtualNetworkSubnetConfig -Name 'DemoSubnet' `
@@ -56,7 +57,7 @@ $virtualNetwork | Set-AzVirtualNetwork
 New-AzResourceGroup -Name $diagStorageRg -Location $deploymentLocation -Tag $tags
 
 $diagStorage = New-AzStorageAccount
-New-AzStorageAccount -ResourceGroupName $diagStorageRg -AccountName $diagStorageName -Location $deploymentLocation -SkuName Standard_LRS -Kind BlobStorage -Tag $tags
+New-AzStorageAccount -ResourceGroupName $diagStorageRg -AccountName $diagStorageName -Location $deploymentLocation -SkuName Standard_LRS -Tag $tags
 ```
 
 ### Virtual Machine Deployment
@@ -71,7 +72,7 @@ $nsg = New-AzNetworkSecurityGroup -Name $nsgName `
     -Tag $tags
 
 # Load network and subnet information
-$vnet = Get-AzVirtualNetwork -Name $networkName -ResourceGroupName $rgNetwork
+$vnet = Get-AzVirtualNetwork -Name $networkName -ResourceGroupName $networkRg
 $subnet = Get-AzVirtualNetworkSubnetConfig -Name 'DemoSubnet' -VirtualNetwork $vnet
 
 # Create IP configuration and network interface
@@ -84,10 +85,12 @@ $nic = New-AzNetworkInterface -Name $nicName `
 
 # Build VM configuration
 $vm = New-AzVMConfig -VMName $vmName -VMSize $vmSize
-$vm = Set-AzVMOperatingSystem -VM $vm -ComputerName $vmName -Credential $vmCredentials -ProvisionVMAgent -EnableAutoUpdate $true -EnableHotpatching $true -PatchMode AutomaticByOS
+$vm = Set-AzVMOperatingSystem -VM $vm -ComputerName $vmName -Credential $vmCredentials -ProvisionVMAgent -Windows
 $vm = Add-AzVMNetworkInterface -VM $vm -Id $nic.Id
 $vm = Set-AzVMSourceImage -VM $vm -PublisherName 'MicrosoftWindowsServer' -Offer 'WindowsServer' -Skus '2022-datacenter-azure-edition' -Version 'latest'
 $vm = Set-AzVMOSDisk -VM $vm -Name $diskName -DiskSizeInGB '128' -StorageAccountType StandardSSD_LRS -CreateOption fromImage
+$vm = Set-AzVMBootDiagnostic -VM $vm -Enable -ResourceGroupName $diagStorageRg -StorageAccountName $diagStorageName
 
-$vm = Set-AzVMBootDiagnostics -VM $vm -Enable -ResourceGroupName $diagStorageRg -StorageAccountName $diagStorageName
+# VM deployment
+$vm = New-AzVM -VM $vm -ResourceGroupName $vmRg -Location $deploymentLocation -Tag $tags
 ```
