@@ -7,7 +7,7 @@ $networkName = "pdmo-vnet1-csn"
 
 # Diagnostics Storage Variables
 $diagStorageRg = "pdmo-sto1-csn-rg"
-$diagStorageName = "pdmosto1csn"
+$diagStorageName = "pdmosto2diagcsn"
 
 # Virtual Machine Variables
 $vmName = "pdmo-adds1-csn"
@@ -67,8 +67,23 @@ $vm = Set-AzVMOperatingSystem -VM $vm -ComputerName $vmName -Credential $vmCrede
 $vm = Add-AzVMNetworkInterface -VM $vm -Id $nic.Id
 $vm = Set-AzVMSourceImage -VM $vm -PublisherName 'MicrosoftWindowsServer' -Offer 'WindowsServer' -Skus '2022-datacenter-azure-edition' -Version 'latest'
 $vm = Set-AzVMOSDisk -VM $vm -Name $diskName -DiskSizeInGB '128' -StorageAccountType StandardSSD_LRS -CreateOption fromImage
-
 $vm = Set-AzVMBootDiagnostic -VM $vm -Enable -ResourceGroupName $diagStorageRg -StorageAccountName $diagStorageName
 
 # VM deployment
 $vm = New-AzVM -VM $vm -ResourceGroupName $vmRg -Location $deploymentLocation -Tag $tags
+
+$userName = "locadmin"
+$userPassword = "Kennwort_2022!" | ConvertTo-SecureString -AsPlainText -Force
+$fileUri = "https://pdmosto2mastercsn.blob.core.windows.net/dsc/CreateADPDC.zip"
+$settings = @{"ModulesUrl" = $fileUri; ConfigurationFunction = "CreateADPDC.ps1\CreateADPDC"; Properties = @{DomainName = "lro.int"; AdminCreds = @{ UserName = $userName; Password = "PrivateSettingsRef:AdminPassword" } } }
+$protectedSettings = @{ Items = @{ AdminPassword = $userPassword } }
+
+Set-AzVMExtension -ResourceGroupName $vmRg `
+	-Location $deploymentLocation `
+	-VMName $vmName `
+	-Name "CreateADForest" `
+	-Publisher "Microsoft.PowerShell" `
+	-ExtensionType "DSC" `
+	-TypeHandlerVersion "2.19" `
+	-Settings $settings `
+	-ProtectedSettings $protectedSettings
