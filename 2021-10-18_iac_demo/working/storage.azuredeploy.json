@@ -1,0 +1,33 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "accountName": {
+      "type": "string",
+      "defaultValue": "pdcodemosto2csn",
+      "metadata": {
+        "description": "Name of the Azure storage account"
+      }
+    }
+  },
+  "functions": [],
+  "variables": {},
+  "resources": [
+    {
+      "name": "[parameters('accountName')]",
+      "type": "Microsoft.Storage/storageAccounts",
+      "apiVersion": "2021-04-01",
+      "tags": {
+        "displayName": "pdcodemosto1csn",
+        "Creator": "lrottach@baggenstos.ch"
+      },
+      "location": "[resourceGroup().location]",
+      "kind": "StorageV2",
+      "sku": {
+        "name": "Premium_LRS",
+        "tier": "Premium"
+      }
+    }
+  ],
+  "outputs": {}
+}
