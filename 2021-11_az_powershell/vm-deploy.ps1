@@ -86,4 +86,6 @@ Set-AzVMExtension -ResourceGroupName $vmRg `
 	-ExtensionType "DSC" `
 	-TypeHandlerVersion "2.19" `
 	-Settings $settings `
-	-ProtectedSettings $protectedSettings
+	-ProtectedSettings $protectedSettings `
+	-AsJob
+
